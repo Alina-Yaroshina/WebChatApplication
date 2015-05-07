@@ -1,0 +1,1 @@
+File "history.xml" will be located in the home directory.
