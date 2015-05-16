@@ -24,6 +24,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
+import javax.xml.xpath.XPathExpressionException;
 
 import org.apache.log4j.Logger;
 import org.json.simple.JSONObject;
@@ -70,6 +71,31 @@ public class MessageServlet extends HttpServlet {
             XMLHistoryUtil.addData(messageInfo);
             response.setStatus(HttpServletResponse.SC_OK);
         } catch (ParseException | ParserConfigurationException | SAXException | TransformerException e) {
+            logger.error(e);
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST);
+        }
+    }
+
+    @Override
+    protected void doDelete(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        logger.info("doDelete");
+        String data = ServletUtil.getMessageBody(request);
+        logger.info(data);
+        try {
+            JSONObject json = stringToJson(data);
+            MessageInfo messageInfo = jsonToMessage(json);
+            String id = messageInfo.getId();
+            MessageInfo messageToUpdate = MessagesStorage.getMessageById(id);
+            if (messageToUpdate != null) {
+                messageToUpdate.setMessage("[deleted]");
+                messageToUpdate.setDeleted(true);
+                MessageInfo updatedMessage = XMLHistoryUtil.updateData(messageToUpdate);
+                MessagesStorage.addMessage(updatedMessage);
+                response.setStatus(HttpServletResponse.SC_OK);
+            } else {
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Message does not exist");
+            }
+        } catch (ParseException | ParserConfigurationException | SAXException | TransformerException | XPathExpressionException e) {
             logger.error(e);
             response.sendError(HttpServletResponse.SC_BAD_REQUEST);
         }

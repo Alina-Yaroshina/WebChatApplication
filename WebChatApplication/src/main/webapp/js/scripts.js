@@ -65,7 +65,7 @@ function delegateEvent(evtObj) {
     }
 }
 
-function onDelete(obj) {
+function onDelete(obj, continueWith) {
     change = false;
     obj.target.parentNode.parentNode.childNodes[1].textContent = "[deleted]";
     obj.target.parentNode.style.display = 'none';
@@ -75,7 +75,9 @@ function onDelete(obj) {
             continue;
         appState.mesList[i].message = "[deleted]";
         appState.mesList[i].deleted = true;
-        del(appState.mainUrl + '?id=' + appState.mesList[i].id);
+        del(appState.mainUrl + '?id=' + appState.mesList[i].id, JSON.stringify(appState.mesList[i]), function() {
+            continueWith && continueWith();
+        });
     }
 }
 
@@ -213,13 +215,17 @@ function createOrUpdateMessages(messages) {
     var mesBox = document.getElementsByClassName('message_box')[0];
     if (appState.mesList.length > 0) {
         for (var i = 0; i < messages.length; i++) {
-            for (var i = 0; i < appState.mesList.length; i++) {
-                if (appState.mesList[i].id == messages[i].id) {
+            var count = 0;
+            for (var j = 0; j < appState.mesList.length; j++) {
+                if (appState.mesList[j].id == messages[i].id) {
                     continue;
                 }
                 else {
-                    addMessage(messages[i]);
+                    count++;
                 }
+            }
+            if(count==0) {
+                addMessage(messages[i]);
             }
         }
     }

@@ -4,6 +4,7 @@
 
 <web-app>
   <display-name>Archetype Created Web Application</display-name>
+
     <servlet>
         <servlet-name>resourcesServlet</servlet-name>
         <servlet-class>bsu.fpmi.chat.controller.ResourcesServlet</servlet-class>
@@ -12,4 +13,20 @@
         <servlet-name>resourcesServlet</servlet-name>
         <url-pattern>/resources/*</url-pattern>
     </servlet-mapping>
+
+    <error-page>
+        <error-code>400</error-code>
+        <location>/WEB-INF/resources/error-pages/400BadRequest.jsp</location>
+    </error-page>
+
+    <error-page>
+        <error-code>404</error-code>
+        <location>/WEB-INF/resources/error-pages/404NotFound.jsp</location>
+    </error-page>
+
+    <error-page>
+        <error-code>500</error-code>
+        <location>/WEB-INF/resources/error-pages/500InternalServerError.jsp</location>
+    </error-page>
+
 </web-app>
