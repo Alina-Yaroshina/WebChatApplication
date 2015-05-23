@@ -88,10 +88,10 @@ function onEditSend() {
     for(var i = 0; i < appState.mesList.length; i++) {
         if(appState.mesList[i].id != id)
             continue;
-        appState.mesList[i].message = message.value;
+        appState.mesList[i].messageText = message.value;
         object.target.parentNode.parentNode.childNodes[1].textContent = message.value;
         put(appState.mainUrl + '?id=' + appState.mesList[i].id, JSON.stringify(appState.mesList[i]));
-        document.getElementById('message').value = appState.mesList[i].message;
+        break;
     }
     change = false;
     document.getElementById('message').value = '';
@@ -127,6 +127,8 @@ function onAddButtonClick() {
 
 function addMessage(mesObj, continueWith) {
     //addMessageInternal(mesObj);
+    if(mesObj.messageText == '')
+        return;
     post(appState.mainUrl, JSON.stringify(mesObj), function(){
         addMessageInternal(mesObj);
         continueWith && continueWith();
@@ -204,10 +206,12 @@ function restore(continueWith) {
     });
 }
 
-function getHistory(responseText, continueWith) {
-    var response = JSON.parse(responseText);
-    appState.token = response.token;
-    createOrUpdateMessages(response.messages);
+function getHistory(xhr, continueWith) {
+    if(xhr.status != 304) {
+        var response = JSON.parse(xhr.responseText);
+        appState.token = response.token;
+        createOrUpdateMessages(response.messages);
+    }
     continueWith && continueWith();
 }
 
@@ -218,6 +222,8 @@ function createOrUpdateMessages(messages) {
             var count = 0;
             for (var j = 0; j < appState.mesList.length; j++) {
                 if (appState.mesList[j].id == messages[i].id) {
+                    if (appState.mesList[j].messageText != messages[i].messageText)
+                        appState.mesList[j].messageText = messages[i].messageText;
                     continue;
                 }
                 else {
@@ -236,17 +242,9 @@ function createOrUpdateMessages(messages) {
     }
 }
 
-
-function output(){
-    document.getElementsByClassName('server_success')[0].style.display = 'none';
-    document.getElementsByClassName('server_unsuccess')[0].style.display = 'inline';
-    document.getElementsByClassName('server_unsuccess')[0].style.margin_top = '15px';
-    document.getElementsByClassName('server_unsuccess')[0].style.float = 'right';
-}
-
 function defaultErrorHandler(message) {
     console.error(message);
-    output(message);
+    setServerStatus('GET', false);
 }
 
 function get(url, continueWith, continueWithError) {
@@ -287,25 +285,21 @@ function ajax(method, url, data, continueWith, continueWithError) {
     xhr.onload = function () {
         if (xhr.readyState !== 4)
             return;
+        if(xhr.status != 304) {
+            if (xhr.status != 200) {
+                setServerStatus(method, false);
+                continueWithError('Error on the server side, response ' + xhr.status);
+                return;
+            }
 
-        if(xhr.status != 200) {
-            setServerStatus(method, false);
-            continueWithError('Error on the server side, response ' + xhr.status);
-            return;
-        }
-
-        if(isError(xhr.responseText)) {
-            setServerStatus(method, false);
-            continueWithError('Error on the server side, response ' + xhr.responseText);
-            return;
+            if (isError(xhr.responseText)) {
+                setServerStatus(method, false);
+                continueWithError('Error on the server side, response ' + xhr.responseText);
+                return;
+            }
         }
         setServerStatus(method, true);
-        document.getElementsByClassName('server_unsuccess')[0].style.display = 'none';
-        document.getElementsByClassName('server_success')[0].style.display = 'inline';
-        document.getElementsByClassName('server_success')[0].style.margin_top = '15px';
-        document.getElementsByClassName('server_success')[0].style.float = 'right';
-
-        continueWith(xhr.responseText);
+        continueWith(xhr);
     };
 
     xhr.ontimeout = function () {
@@ -320,7 +314,6 @@ function ajax(method, url, data, continueWith, continueWithError) {
             '- server is active\n'+
             '- server sends header "Access-Control-Allow-Origin:*"';
         setServerStatus(method, false);
-        output(errMsg);
         continueWithError(errMsg);
     };
 
@@ -328,7 +321,7 @@ function ajax(method, url, data, continueWith, continueWithError) {
 }
 
 window.onerror = function(err) {
-    output(err.toString());
+    setServerStatus('GET', false);
 }
 
 function setServerStatus(method, serverState) {

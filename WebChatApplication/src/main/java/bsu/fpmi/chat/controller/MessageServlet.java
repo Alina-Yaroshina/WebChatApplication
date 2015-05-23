@@ -46,16 +46,23 @@ public class MessageServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         String token = request.getParameter(TOKEN);
-
         if (token != null && !"".equals(token)) {
             int index = getIndex(token);
-            String messages = formResponse(index);
-            response.setContentType(ServletUtil.APPLICATION_JSON);
-            PrintWriter out = response.getWriter();
-            out.print(messages);
-            out.flush();
+            if(MessagesStorage.getSubMessagesByIndex(index).size() == 0) {
+                response.sendError(HttpServletResponse.SC_NOT_MODIFIED);
+            }
+            else {
+                String messages = formResponse(index);
+                response.setCharacterEncoding("UTF-8");
+                response.setContentType(ServletUtil.APPLICATION_JSON);
+                PrintWriter out = response.getWriter();
+                out.print(messages);
+                out.flush();
+                logger.info("GET:\n" + messages);
+            }
         } else {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "'token' parameter needed");
+            logger.error(HttpServletResponse.SC_BAD_REQUEST + "'token' parameter needed");
         }
     }
 
@@ -67,6 +74,7 @@ public class MessageServlet extends HttpServlet {
             JSONObject json = stringToJson(data);
             MessageInfo messageInfo = jsonToMessage(json);
             System.out.println(messageInfo.getFormat());
+            logger.info("POST: " + messageInfo.getFormat());
             MessagesStorage.addMessage(messageInfo);
             XMLHistoryUtil.addData(messageInfo);
             response.setStatus(HttpServletResponse.SC_OK);
@@ -78,22 +86,47 @@ public class MessageServlet extends HttpServlet {
 
     @Override
     protected void doDelete(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        logger.info("doDelete");
+
         String data = ServletUtil.getMessageBody(request);
-        logger.info(data);
         try {
             JSONObject json = stringToJson(data);
             MessageInfo messageInfo = jsonToMessage(json);
+            logger.info("DELETE: " + messageInfo.getFormat());
             String id = messageInfo.getId();
             MessageInfo messageToUpdate = MessagesStorage.getMessageById(id);
             if (messageToUpdate != null) {
                 messageToUpdate.setMessage("[deleted]");
                 messageToUpdate.setDeleted(true);
                 MessageInfo updatedMessage = XMLHistoryUtil.updateData(messageToUpdate);
-                MessagesStorage.addMessage(updatedMessage);
+                //MessagesStorage.addMessage(updatedMessage);
                 response.setStatus(HttpServletResponse.SC_OK);
             } else {
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Message does not exist");
+            }
+        } catch (ParseException | ParserConfigurationException | SAXException | TransformerException | XPathExpressionException e) {
+            logger.error(e);
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST);
+        }
+    }
+
+    @Override
+    protected void doPut(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        String data = ServletUtil.getMessageBody(request);
+        try {
+            JSONObject json = stringToJson(data);
+            MessageInfo messageInfo = jsonToMessage(json);
+            logger.info("PUT: " + messageInfo.getFormat());
+            String id = messageInfo.getId();
+            MessageInfo messageToUpdate = MessagesStorage.getMessageById(id);
+            if (messageToUpdate != null) {
+                messageToUpdate.setMessage(messageInfo.getMessageText());
+                messageToUpdate.setEdited(true);
+                MessageInfo updatedMessage = XMLHistoryUtil.updateData(messageToUpdate);
+                //MessagesStorage.addMessage(updatedMessage);
+                response.setStatus(HttpServletResponse.SC_OK);
+            } else {
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Message does not exist");
+                logger.error(HttpServletResponse.SC_BAD_REQUEST + "Message does not exist");
             }
         } catch (ParseException | ParserConfigurationException | SAXException | TransformerException | XPathExpressionException e) {
             logger.error(e);
