@@ -104,6 +104,14 @@ public class XMLHistoryUtil {
         return (Node) expr.evaluate(doc, XPathConstants.NODE);
     }
 
+    public static void addDataFromDB(List<MessageInfo> messages) throws ParserConfigurationException, SAXException, IOException, TransformerException {
+        int i = 0;
+        while(i < messages.size()) {
+            addData(messages.get(i));
+            i++;
+            }
+        }
+
     public static synchronized MessageInfo updateData(MessageInfo messageInfo) throws ParserConfigurationException, SAXException,
             IOException, TransformerException, XPathExpressionException {
         DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();

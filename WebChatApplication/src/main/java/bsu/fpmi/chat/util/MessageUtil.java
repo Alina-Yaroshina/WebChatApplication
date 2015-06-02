@@ -36,7 +36,7 @@ public final class MessageUtil {
     }
 
     private static String generateDate() {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy, HH:mm:ss");
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd, HH:mm:ss");
         dateFormat.setTimeZone(TimeZone.getTimeZone("GMT+2"));
         return dateFormat.format(new Date());
     }

@@ -6,6 +6,8 @@ import bsu.fpmi.chat.storage.XMLHistoryUtil;
 import bsu.fpmi.chat.util.ServletUtil;
 import org.json.simple.parser.ParseException;
 import org.xml.sax.SAXException;
+import bsu.fpmi.chat.dao.MessageInfoDao;
+import bsu.fpmi.chat.dao.MessageInfoDaoImpl;
 
 import static bsu.fpmi.chat.util.MessageUtil.MESSAGES;
 import static bsu.fpmi.chat.util.MessageUtil.TOKEN;
@@ -16,6 +18,7 @@ import static bsu.fpmi.chat.util.MessageUtil.stringToJson;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -33,10 +36,12 @@ import org.json.simple.JSONObject;
 public class MessageServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
     private static Logger logger = Logger.getLogger(MessageServlet.class.getName());
+    private MessageInfoDao messageDao;
 
     @Override
     public void init() throws ServletException {
         try {
+            messageDao = new MessageInfoDaoImpl();
             loadHistory();
         } catch (SAXException | IOException | ParserConfigurationException | TransformerException | NullPointerException e) {
             logger.error(e);
@@ -77,6 +82,7 @@ public class MessageServlet extends HttpServlet {
             logger.info("POST: " + messageInfo.getFormat());
             MessagesStorage.addMessage(messageInfo);
             XMLHistoryUtil.addData(messageInfo);
+            messageDao.add(messageInfo);
             response.setStatus(HttpServletResponse.SC_OK);
         } catch (ParseException | ParserConfigurationException | SAXException | TransformerException e) {
             logger.error(e);
@@ -99,6 +105,7 @@ public class MessageServlet extends HttpServlet {
                 messageToUpdate.setDeleted(true);
                 MessageInfo updatedMessage = XMLHistoryUtil.updateData(messageToUpdate);
                 //MessagesStorage.addMessage(updatedMessage);
+                messageDao.update(updatedMessage);
                 response.setStatus(HttpServletResponse.SC_OK);
             } else {
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Message does not exist");
@@ -123,6 +130,7 @@ public class MessageServlet extends HttpServlet {
                 messageToUpdate.setEdited(true);
                 MessageInfo updatedMessage = XMLHistoryUtil.updateData(messageToUpdate);
                 //MessagesStorage.addMessage(updatedMessage);
+                messageDao.update(updatedMessage);
                 response.setStatus(HttpServletResponse.SC_OK);
             } else {
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Message does not exist");
@@ -142,11 +150,18 @@ public class MessageServlet extends HttpServlet {
     }
 
     private void loadHistory() throws SAXException, IOException, ParserConfigurationException, TransformerException  {
-        if (XMLHistoryUtil.doesStorageExist()) {
+        /*if (XMLHistoryUtil.doesStorageExist()) {
             MessagesStorage.addAll(XMLHistoryUtil.getMessages());
             System.out.println(MessagesStorage.getFormattedView());
         } else {
             XMLHistoryUtil.createStorage();
+        }*/
+        List<MessageInfo> messages = messageDao.selectAll();
+        MessagesStorage.addAll(messages);
+        System.out.println(MessagesStorage.getFormattedView());
+        if (!XMLHistoryUtil.doesStorageExist()) {
+            XMLHistoryUtil.createStorage();
         }
+        XMLHistoryUtil.addDataFromDB(messages);
     }
 }
